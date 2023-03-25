@@ -1,14 +1,14 @@
 type Options<T> = {
     retry?: boolean,
     retries?: number,
-    onRetry?: () => void,
-    onSuccess?: (result: T) => void,
-    onError?: (error: Error) => void
+    onRetry?: (retry?: number) => void,
+    onSuccess?: (result?: T) => void,
+    onError?: (error?: Error) => void
 }
 
 const tryto = async <T, K = T>(
     fn: () => Promise<T>,
-    fallbackFn?: () => Promise<K>,
+    catchFn?: () => Promise<K | never>,
     options?: Options<T | K>
 ): Promise<T | K | undefined> => {
     const {
@@ -35,26 +35,22 @@ const tryto = async <T, K = T>(
                 retriesLeft--
 
                 if (onRetry) {
-                    onRetry()
+                    onRetry(retries - retriesLeft)
                 }
 
                 continue
             }
 
-            if (fallbackFn) {
+            if (catchFn) {
                 try {
-                    const result = await fallbackFn()
-
-                    if (onSuccess) {
-                        onSuccess(result)
-                    }
+                    const result = await catchFn()
 
                     return result
-                } catch (fallbackError) {
+                } catch (catchError) {
                     if (onError) {
-                        onError(fallbackError)
+                        onError(catchError)
                     } else {
-                        console.error(`Fallback error occured: ${fallbackError}`)
+                        console.error(`Fallback error occured: ${catchError}`)
                     }
 
                     return undefined
@@ -74,7 +70,7 @@ const tryto = async <T, K = T>(
 
 tryto.sync = <T, K = T>(
     fn: () => T,
-    fallbackFn?: () => K,
+    catchFn?: () => K,
     options?: Options<T | K>
 ): T | K | undefined => {
     const {
@@ -101,26 +97,22 @@ tryto.sync = <T, K = T>(
                 retriesLeft--
 
                 if (onRetry) {
-                    onRetry()
+                    onRetry(retries - retriesLeft)
                 }
 
                 continue
             }
 
-            if (fallbackFn) {
+            if (catchFn) {
                 try {
-                    const result = fallbackFn()
-
-                    if (onSuccess) {
-                        onSuccess(result)
-                    }
+                    const result = catchFn()
 
                     return result
-                } catch (fallbackError) {
+                } catch (catchError) {
                     if (onError) {
-                        onError(fallbackError)
+                        onError(catchError)
                     } else {
-                        console.error(`Fallback error occured: ${fallbackError}`)
+                        console.error(`Fallback error occured: ${catchError}`)
                     }
 
                     return undefined
