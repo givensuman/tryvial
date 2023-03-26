@@ -1,131 +1,121 @@
 type Options<T> = {
-    retry?: boolean,
-    retries?: number,
-    onRetry?: (retry?: number) => void,
-    onSuccess?: (result?: T) => void,
-    onError?: (error?: Error) => void
+    retry?: boolean;
+    retries?: number;
+    retryDelay?: number;
+    jitter?: number;
+    fallback?: (() => Promise<T>) | Array<() => Promise<T>>;
+    timeout?: boolean;
+    timeoutAfter?: number;
+    onTimeout?: () => void;
+    onRetry?: (retryNumber: number) => void;
+    onSuccess?: (result: T) => void;
+    onError?: (error: Error | Error[]) => void;
 }
 
-const tryto = async <T, K = T>(
-    fn: () => Promise<T>,
-    catchFn?: () => Promise<K | never>,
-    options?: Options<T | K>
-): Promise<T | K | undefined> => {
+export async function tryto<T>(
+fn: () => Promise<T>,
+options?: Options<T>
+): Promise<T | undefined> {
     const {
         retry = false,
         retries = 2,
+        retryDelay = 0,
+        jitter = 0,
+        fallback,
+        timeout = false,
+        timeoutAfter = 10000,
+        onTimeout,
         onRetry,
         onSuccess,
-        onError
-    } = options || {}
+        onError,
+    } = options || {};
 
-    let retriesLeft = retries
+    let retriesLeft = retries;
 
     while (true) {
         try {
-            const result = await fn()
+            let result: T
+
+            if (timeout) {
+                result = await Promise.race([
+                    fn(),
+                    new Promise<T>((_, reject) => {
+                        setTimeout(() => {
+                            reject(new Error());
+
+                            if (onTimeout) {
+                                onTimeout();
+                            }
+                        }, timeoutAfter)
+                    })
+                ])
+            } else {
+                result = await fn();
+            }
 
             if (onSuccess) {
-                onSuccess(result)
+                onSuccess(result as T);
             }
 
-            return result
+            return result as T;
         } catch (error) {
-            if (retry && retriesLeft > 0) {
-                retriesLeft--
+            retriesLeft--;
 
+            if (retriesLeft >= 0 && retry) {
                 if (onRetry) {
-                    onRetry(retries - retriesLeft)
+                    onRetry(retries - retriesLeft);
                 }
+     
+                const waitTime = Math.max(retryDelay,(Math.floor(Math.random() * jitter) + retryDelay));
 
-                continue
+                await new Promise((resolve) => setTimeout(resolve, waitTime));
+
+                continue;
             }
 
-            if (catchFn) {
-                try {
-                    const result = await catchFn()
+            if (onError) {
+                onError(error as Error);
+            }
 
-                    return result
-                } catch (catchError) {
-                    if (onError) {
-                        onError(catchError)
-                    } else {
-                        console.error(`Fallback error occured: ${catchError}`)
+            if (fallback) {
+                if (Array.isArray(fallback)) {
+                    const errorArray: Error[] = []
+
+                    for (const fallbackFn of fallback) {
+                        try {
+                            const fallbackResult = await fallbackFn();
+
+                            if (onSuccess) {
+                                onSuccess(fallbackResult);
+                            }
+
+                            return fallbackResult;
+                        } catch (fallbackError) {
+                            errorArray.push(fallbackError as Error);
+                        }
                     }
 
-                    return undefined
-                }   
-            } else {
-                if (onError) {
-                    onError(error)
-                } else {
-                    console.error(`Error occured: ${error}`)
-                }
-
-                return undefined
-            }
-        }
-    }
-}
-
-tryto.sync = <T, K = T>(
-    fn: () => T,
-    catchFn?: () => K,
-    options?: Options<T | K>
-): T | K | undefined => {
-    const {
-        retry = false,
-        retries = 2,
-        onRetry,
-        onSuccess,
-        onError
-    } = options || {}
-
-    let retriesLeft = retries
-
-    while (true) {
-        try {
-            const result = fn()
-
-            if (onSuccess) {
-                onSuccess(result)
-            }
-
-            return result
-        } catch (error) {
-            if (retry && retriesLeft > 0) {
-                retriesLeft--
-
-                if (onRetry) {
-                    onRetry(retries - retriesLeft)
-                }
-
-                continue
-            }
-
-            if (catchFn) {
-                try {
-                    const result = catchFn()
-
-                    return result
-                } catch (catchError) {
                     if (onError) {
-                        onError(catchError)
-                    } else {
-                        console.error(`Fallback error occured: ${catchError}`)
+                        onError(errorArray);
                     }
-
-                    return undefined
-                }   
-            } else {
-                if (onError) {
-                    onError(error)
                 } else {
-                    console.error(`Error occured: ${error}`)
-                }
+                    try {
+                        const fallbackResult = await fallback();
 
-                return undefined
+                        if (onSuccess) {
+                            onSuccess(fallbackResult);
+                        }
+
+                        return fallbackResult;
+                    } catch (fallbackError) {
+                        if (onError) {
+                            onError(fallbackError as Error)
+                        }
+                    }
+                }
             }
+
+            return undefined
         }
     }
 }

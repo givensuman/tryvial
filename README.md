@@ -1,6 +1,7 @@
-# tryto | Simplified try/catch API
+# `tryto `
+### A value-packed alternative to try/catch hell
 
-A utility library that simplifies the try/catch block and provides optional retry functionality for (a)synchronous operations.
+This is a utility library that simplifies the try/catch block and provides optional retry functionality for asynchronous operations.
 
 ## Installation
 
@@ -15,9 +16,7 @@ pnpm i tryto
 ```
 ## Usage
 
-The package exports two functions: `tryto` and `tryto.sync`
-
-These simplify code by wrapping the provided function in a try/catch block. If an error is thrown, you can provide an optional fallback function to handle the error. If you enable the retry functionality, the package will attempt to retry the operation a specified number of times. 
+`tryto` simplifies code by wrapping the provided function in a try/catch block. If an error is thrown, you can provide an optional fallback function to handle the error. If you enable the retry functionality, the package will attempt to retry the operation a specified number of times. It's also got timeout support, fallbacks, the works.
 
 That's the gist of it, here's the implementation:
 
@@ -28,58 +27,48 @@ const do_something = async () => {
   // your asynchronous code here
 };
 
-const handle_an_error = async () => {
-  // your asynchronous fallback here
+const handle_an_error = async (error?: Error) => {
+  // your error handling here
 }
 
-tryto(do_something, handle_a_failure, {
+// Simple implementation
+const result = await tryto(do_something, {
+  onError: handle_an_error
+})
+
+// Kitchen sink
+const result = await tryto(do_something, {
   retry: true,
-  retries: 3,
-  onRetry: () => {
-    console.log("Retrying...");
-  },
-  onSuccess: () => {
-    console.log("Operation succeeded!");
-  },
-  onError: () => {
-    console.log("Operation failed!");
-  },
-});
-```
-
-`tryto.sync` is a synchronous version of the above.
-
-```js
-import tryto from "tryto";
-
-const do_something_synchronously = () => {
-  // your synchronous code here
-};
-
-tryto.sync(do_something_synchronously)
+  retries: 5,
+  retryDelay: 100,
+  jitter: 0.25,
+  fallback: [...some_fallbacks],
+  timeout: true,
+  timeoutAfter: 9999,
+  onTimeout: () => console.error("A timeout occured"),
+  onRetry: retry => console.log(`Retrying... ${retry}/5`),
+  onSuccess: result => console.log(`Success: ${result}`),
+  onError: handle_an_error
+})
 ```
 
 ## Parameters
 
-`tryto` has three parameters:
-
-|name|type|description|
-|---|---|---|
-|fn|() => Promise\<T>|The function to try and execute|
-|catchFn|() => Promise<K \| never>|The function to try and execute if `fn` fails|
-|options|Options\<T>|See below|
-
-Both `tryto` and `tryto.sync` take an options object with the following properties:
+`tryto` only has two parameters, the `fn` that it tries, and the `options` it applies:
 
 |name|type|default|description|
 |---|---|---|---|
-|retry|boolean|false|Whether or not to retry `fn` before moving to `catchFn`|
-|retries|number|2|Number of retries to attempt, if `retry` is true
-|onRetry|() => void|undefined|Callback to run on retry attempt|
-|onSuccess|() => void|undefined|Callback to run if `fn` succeeds|
-|onError*|() => void|undefined|Callback to run if `fn` *and* `catchFn` fail|
-
-*`onError` has default behavior of logging `Error occured: ${error}` or `Fallback error occured: ${catchError}`
+|retry|`boolean`|`false`|Whether or not to retry `fn`|
+|retries|`number`|`2`|Number of times to retry before moving to the catch block|
+|retryDelay|`number`|`0`|Delay (ms) to be implemented between retries|
+|jitter|`number`|`0`|Delay (ms) to be randomly added to retries to prevent network bottlenecking. For example, a `jitter` of 500 will add an additional delay anywhere between 0ms and 500ms.|
+|fallback|`(() => Promise<T>) \| Array<() => Promise<T>>`|`undefined`|Fallback function or array of fallback functions to attempt if `fn` fails. Does not attempt retries. If an array is passed and all fallbacks fail, `onError` is passed an array of errors (`Error[]`).|
+|timeout|`boolean`|`false`|Whether or not to enforce a timeout, after which `fn` automatically fails|
+|timeoutAfter|`number`|`10000`|Time (ms) after which `fn` will automatically fail|
+|onTimeout|`() => void`|`undefined`|Callback to run if timeout happens|
+|onRetry|`(retryNumber: number) => void`|`undefined`|Callback to run if retry happens. Passes the current retry number as argument.|
+|onSuccess|`(result: T) => void`|`undefined`|Callback to run if `fn` or `fallback` succeeds. Passes `result as T` as argument.|
+|onError|`(error: Error \| Error[]) => void`|`undefined`|Callback to run if `fn` or `fallback` fails. Passes `error as Error` or `error as Error[]` as argument.|
 
 ## Contributing
 
