@@ -1,5 +1,5 @@
 # `tryto`
-### A value-packed alternative to try/catch hell
+### Value-packed alternative to try/catch hell
 
 This is a utility library that simplifies the try/catch block and packs on functionality for handling asynchronous operations.
 
@@ -16,7 +16,7 @@ pnpm i tryto
 ```
 ## Usage
 
-`tryto` simplifies code by wrapping the provided function in a try/catch block. If an error is thrown, you can provide an optional fallback(s) or a handler to manage the error. If you enable the retry functionality, the package will attempt to retry the operation a specified number of times. It's also got timeout support, fallbacks, the works.
+`tryto` tries to simplify code by wrapping the provided function in a try/catch block. If an error is thrown, you can provide an optional fallback(s) or a handler to manage the error. If you enable the retry functionality, the package will attempt to retry the operation a specified number of times. It's also got timeout support, fallbacks, the works.
 
 That's the gist of it, here's the implementation:
 
