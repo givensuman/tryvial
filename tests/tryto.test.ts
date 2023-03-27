@@ -1,20 +1,20 @@
-import tryto from '../index';
+import tryvial from '../index';
 
 // Mock function that always throws an error
 const failingFn = async () => {
   throw new Error();
 };
 
-describe('tryto', () => {
+describe('tryvial', () => {
   describe('without options', () => {
     it('should return the result of the function', async () => {
-      const result = await tryto(() => Promise.resolve('foo'));
+      const result = await tryvial(() => Promise.resolve('foo'));
 
       expect(result).toEqual('foo');
     });
 
     it('should return undefined if the function throws an error', async () => {
-      const result = await tryto(failingFn);
+      const result = await tryvial(failingFn);
 
       expect(result).toBeUndefined();
     });
@@ -23,7 +23,7 @@ describe('tryto', () => {
   describe('with retry', () => {
     it('should retry the function and return the result', async () => {
       let count = 0;
-      const result = await tryto(() => {
+      const result = await tryvial(() => {
         count++;
         if (count === 3) {
           return Promise.resolve('foo');
@@ -37,7 +37,7 @@ describe('tryto', () => {
 
     it('should not retry the function if retry is false', async () => {
       let count = 0;
-      const result = await tryto(() => {
+      const result = await tryvial(() => {
         count++;
         throw new Error();
       }, { retry: false });
@@ -49,13 +49,13 @@ describe('tryto', () => {
 
   describe('with fallback', () => {
     it('should try the fallback function and return the result if the main function fails', async () => {
-      const result = await tryto(failingFn, { fallback: () => Promise.resolve('foo') });
+      const result = await tryvial(failingFn, { fallback: () => Promise.resolve('foo') });
 
       expect(result).toEqual('foo');
     });
 
     it('should try the fallback functions in order if the previous one fails', async () => {
-      const result = await tryto(failingFn, {
+      const result = await tryvial(failingFn, {
         fallback: [
           () => Promise.reject(new Error()),
           () => Promise.reject(new Error()),
@@ -67,7 +67,7 @@ describe('tryto', () => {
     });
 
     it('should return undefined if all fallback functions fail', async () => {
-      const result = await tryto(failingFn, {
+      const result = await tryvial(failingFn, {
         fallback: [
           () => Promise.reject(new Error()),
           () => Promise.reject(new Error()),
@@ -81,33 +81,33 @@ describe('tryto', () => {
 
   describe('with timeout', () => {
     it('should return the result of the function if it completes before the timeout', async () => {
-      const result = await tryto(() => Promise.resolve('foo'), { timeout: true });
+      const result = await tryvial(() => Promise.resolve('foo'), { timeout: true });
 
       expect(result).toEqual('foo');
     });
 
     it('should return undefined if the function takes longer than the timeout', async () => {
-      const result = await tryto(() => new Promise(resolve => setTimeout(() => resolve('foo'), 5000)), { timeout: true, timeoutAfter: 1000 });
+      const result = await tryvial(() => new Promise(resolve => setTimeout(() => resolve('foo'), 5000)), { timeout: true, timeoutAfter: 1000 });
 
       expect(result).toBeUndefined();
     });
 
     it('should call onTimeout if the function times out', async () => {
       const onTimeout = jest.fn();
-      await tryto(() => new Promise(resolve => setTimeout(() => resolve('foo'), 5000)), { timeout: true, timeoutAfter: 1000, onTimeout });
+      await tryvial(() => new Promise(resolve => setTimeout(() => resolve('foo'), 5000)), { timeout: true, timeoutAfter: 1000, onTimeout });
 
       expect(onTimeout).toHaveBeenCalled();
     });
   });
 });
 
-describe('tryto with options', () => {
+describe('tryvial with options', () => {
   it('calls onError when all retries fail', async () => {
     const err = new Error('Something went wrong');
     const fn = jest.fn().mockRejectedValue(err);
     const onError = jest.fn();
 
-    const result = await tryto(fn, {
+    const result = await tryvial(fn, {
       retry: true,
       retries: 2,
       retryDelay: 0,
@@ -125,7 +125,7 @@ describe('tryto with options', () => {
     const fn = jest.fn().mockResolvedValue(value);
     const onSuccess = jest.fn();
 
-    const result = await tryto(fn, { onSuccess });
+    const result = await tryvial(fn, { onSuccess });
 
     expect(fn).toHaveBeenCalledTimes(1);
     expect(onSuccess).toHaveBeenCalledTimes(1);
@@ -143,7 +143,7 @@ describe('tryto with options', () => {
 
     const onRetry = jest.fn();
 
-    const result = await tryto(fn, {
+    const result = await tryvial(fn, {
       retry: true,
       retries: 2,
       retryDelay: 0,

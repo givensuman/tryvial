@@ -12,7 +12,7 @@ type Options<T> = {
     onError?: (error: Error | Error[]) => void;
 }
 
-export async function tryto<T>(
+export async function tryvial<T>(
 fn: () => Promise<T>,
 options?: Options<T>
 ): Promise<T | undefined> {
@@ -120,4 +120,4 @@ options?: Options<T>
     }
 }
 
-export default tryto
+export default tryvial

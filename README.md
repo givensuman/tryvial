@@ -1,5 +1,7 @@
-# `tryto`
-### Value-packed alternative to try/catch hell
+# `tryvial`
+### Value-packed alternative to try/catch hell 
+
+Pronounced like "trivial" (trĭv′ē-əl)
 
 This is a utility library that simplifies the try/catch block and packs on functionality for handling asynchronous operations.
 
@@ -8,20 +10,20 @@ This is a utility library that simplifies the try/catch block and packs on funct
 You can install the package using npm:
 
 ```bash
-npm install tryto
+npm install tryvial
 # or
-yarn add tryto
+yarn add tryvial
 # or 
-pnpm i tryto
+pnpm i tryvial
 ```
 ## Usage
 
-`tryto` tries to simplify code by wrapping the provided function in a try/catch block. If an error is thrown, you can provide an optional fallback(s) or a handler to manage the error. If you enable the retry functionality, the package will attempt to retry the operation a specified number of times. It's also got timeout support, fallbacks, the works.
+`tryvial` tries to simplify code by wrapping the provided function in a try/catch block. If an error is thrown, you can provide an optional fallback(s) or a handler to manage the error. If you enable the retry functionality, the package will attempt to retry the operation a specified number of times. It's also got timeout support, fallbacks, the works.
 
 That's the gist of it, here's the implementation:
 
 ```js
-import tryto from "tryto";
+import t from "tryvial";
 
 const do_something = async () => {
   // your asynchronous code here
@@ -32,12 +34,12 @@ const handle_an_error = async (error?: Error) => {
 }
 
 // Simple implementation
-const result = await tryto(do_something, {
+const result = await t(do_something, {
   onError: handle_an_error
 })
 
 // Kitchen sink
-const result = await tryto(do_something, {
+const result = await t(do_something, {
   retry: true,
   retries: 5,
   retryDelay: 100,
@@ -54,7 +56,7 @@ const result = await tryto(do_something, {
 
 ## Parameters
 
-`tryto` only has two parameters, the `fn` that it tries, and the `options` it applies:
+`tryvial` only has two parameters, the `fn` that it tries, and the `options` it applies:
 
 |name|type|default|description|
 |---|---|---|---|
